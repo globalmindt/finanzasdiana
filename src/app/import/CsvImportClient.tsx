@@ -5,6 +5,7 @@ type Account = { _id: string; name: string };
 
 export default function CsvImportClient({ accounts }: { accounts: Account[] }) {
   const [accountId, setAccountId] = useState<string>('');
+  const [preset, setPreset] = useState<string>('custom');
   const [delimiter, setDelimiter] = useState<string>(';');
   const [dateFormat, setDateFormat] = useState<'dmy' | 'ymd'>('dmy');
   const [hasHeader, setHasHeader] = useState<boolean>(true);
@@ -12,6 +13,7 @@ export default function CsvImportClient({ accounts }: { accounts: Account[] }) {
   const [colDesc, setColDesc] = useState<string>('description');
   const [colAmount, setColAmount] = useState<string>('amount');
   const [colNotes, setColNotes] = useState<string>('notes');
+  const [colType, setColType] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +45,7 @@ export default function CsvImportClient({ accounts }: { accounts: Account[] }) {
     fd.append('colDesc', colDesc);
     fd.append('colAmount', colAmount);
     fd.append('colNotes', colNotes);
+    if (colType) fd.append('colType', colType);
 
     try {
       const res = await fetch('/api/import/csv', { method: 'POST', body: fd });
@@ -79,6 +82,62 @@ export default function CsvImportClient({ accounts }: { accounts: Account[] }) {
 
       <div className="grid grid-cols-4 gap-3">
         <div>
+          <label className="block text-sm text-gray-600 mb-1">Formato</label>
+          <select
+            value={preset}
+            onChange={(e) => {
+              const p = e.target.value;
+              setPreset(p);
+              if (p === 'ing-nl') {
+                setDelimiter(',');
+                setDateFormat('ymd');
+                setHasHeader(true);
+                setColDate('Date');
+                setColDesc('Name / Description');
+                setColAmount('Amount (EUR)');
+                setColNotes('Notifications');
+                setColType('Debit/credit');
+              } else if (p === 'revolut') {
+                setDelimiter(',');
+                setDateFormat('ymd');
+                setHasHeader(true);
+                setColDate('Date');
+                setColDesc('Description');
+                setColAmount('Amount');
+                setColNotes('Notes');
+                setColType('Type');
+              } else if (p === 'abn-amro') {
+                setDelimiter(';');
+                setDateFormat('dmy');
+                setHasHeader(true);
+                setColDate('Datum');
+                setColDesc('Omschrijving');
+                setColAmount('Bedrag (EUR)');
+                setColNotes('Toelichting');
+                setColType('Mutatie');
+              } else if (p === 'rabobank') {
+                setDelimiter(',');
+                setDateFormat('dmy');
+                setHasHeader(true);
+                setColDate('Datum');
+                setColDesc('Naam/Omschrijving');
+                setColAmount('Bedrag');
+                setColNotes('Mededelingen');
+                setColType('Af/Bij');
+              } else {
+                // custom: no change, el usuario edita manualmente
+              }
+            }}
+            className="w-full rounded border p-2"
+          >
+            <option value="custom">Personalizado</option>
+            <option value="ing-nl">ING (NL)</option>
+            <option value="revolut">Revolut</option>
+            <option value="abn-amro">ABN AMRO</option>
+            <option value="rabobank">Rabobank</option>
+          </select>
+        </div>
+        <div>
           <label className="block text-sm text-gray-600 mb-1">Delimitador</label>
           <input type="text" value={delimiter} onChange={(e) => setDelimiter(e.target.value)} className="w-full rounded border p-2" />
         </div>
@@ -113,6 +172,11 @@ export default function CsvImportClient({ accounts }: { accounts: Account[] }) {
           <div>
             <label className="block text-sm text-gray-600 mb-1">Notas</label>
             <input type="text" value={colNotes} onChange={(e) => setColNotes(e.target.value)} className="w-full rounded border p-2" />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">Tipo (Debit/Credit, opcional)</label>
+            <input type="text" value={colType} onChange={(e) => setColType(e.target.value)} className="w-full rounded border p-2" placeholder="Debit/credit" />
+            <p className="text-xs text-gray-500 mt-1">Si tu CSV tiene una columna con valores "Debit"/"Credit" (como ING), indícala aquí.</p>
           </div>
         </div>
       </div>

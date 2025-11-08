@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 
 type Account = { _id: string; name: string; type: string };
 type Category = { _id: string; name: string; kind: 'income' | 'expense' };
+type Payee = { _id: string; name: string; type: 'income' | 'expense' | 'both'; defaultCategoryId?: string; defaultAmount?: number; defaultNotes?: string; isFixed?: boolean; frequency?: string; billingDayOfMonth?: number };
 type Transaction = {
   _id: string;
   type: 'income' | 'expense' | 'transfer';
@@ -14,6 +15,10 @@ type Transaction = {
   fromAccountId?: string;
   toAccountId?: string;
   notes?: string;
+  payeeId?: string;
+  payeeName?: string;
+  tags?: string[];
+  reference?: string;
 };
 
 function toLocalInput(dt: string | Date) {
@@ -26,10 +31,12 @@ export default function TransactionEditForm({
   transaction,
   accounts,
   categories,
+  payees,
 }: {
   transaction: Transaction;
   accounts: Account[];
   categories: Category[];
+  payees: Payee[];
 }) {
   const router = useRouter();
   const [type, setType] = useState<Transaction['type']>(transaction.type);
@@ -42,6 +49,10 @@ export default function TransactionEditForm({
   const [notes, setNotes] = useState<string>(transaction.notes || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [payeeId, setPayeeId] = useState<string>(transaction.payeeId || '');
+  const [payeeName, setPayeeName] = useState<string>(transaction.payeeName || '');
+  const [tagsStr, setTagsStr] = useState<string>((transaction as any).tags?.join(', ') || '');
+  const [reference, setReference] = useState<string>((transaction as any).reference || '');
 
   const categoriesByType = useMemo(
     () => categories.filter((c) => (type === 'income' ? c.kind === 'income' : c.kind === 'expense')),
@@ -57,6 +68,8 @@ export default function TransactionEditForm({
       if (type === 'income' || type === 'expense') {
         payload.accountId = accountId;
         payload.categoryId = categoryId || undefined;
+        payload.payeeId = payeeId || undefined;
+        payload.payeeName = payeeName || undefined;
         // limpiar campos de transferencia si cambiaron tipo
         payload.fromAccountId = undefined;
         payload.toAccountId = undefined;
@@ -66,7 +79,16 @@ export default function TransactionEditForm({
         // limpiar campos de income/expense si cambiaron tipo
         payload.accountId = undefined;
         payload.categoryId = undefined;
+        payload.payeeId = undefined;
+        payload.payeeName = undefined;
       }
+
+      const tags = tagsStr
+        .split(',')
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
+      if (tags.length) payload.tags = tags;
+      if (reference) payload.reference = reference;
 
       const res = await fetch(`/api/transactions/${transaction._id}`, {
         method: 'PATCH',
@@ -112,7 +134,7 @@ export default function TransactionEditForm({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm text-gray-600 mb-1">Cuenta</label>
-            <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className="w-full rounded border p-2" required>
+            <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className="w-full rounded border p-2">
               <option value="">Selecciona…</option>
               {accounts.map((a) => (
                 <option key={a._id} value={a._id}>
@@ -132,12 +154,41 @@ export default function TransactionEditForm({
             ))}
           </select>
           </div>
+          <div className="col-span-2">
+            <label className="block text-sm text-gray-600 mb-1">Origen / Servicio (opcional)</label>
+            <select
+              value={payeeId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setPayeeId(id);
+                const p = payees.find((pp) => pp._id === id);
+                if (!p) return;
+                if (!categoryId && p.defaultCategoryId) setCategoryId(p.defaultCategoryId);
+                if (!amount && typeof p.defaultAmount === 'number') setAmount(p.defaultAmount);
+                if (!notes && p.defaultNotes) setNotes(p.defaultNotes);
+              }}
+              className="w-full rounded border p-2"
+            >
+              <option value="">Opcional…</option>
+              {payees
+                .filter((p) => p.type === 'both' || p.type === type)
+                .map((p) => (
+                  <option key={p._id} value={p._id}>
+                    {p.name}
+                  </option>
+                ))}
+            </select>
+            <div className="mt-2">
+              <label className="block text-sm text-gray-600 mb-1">Nombre de origen (manual, opcional)</label>
+              <input type="text" value={payeeName} onChange={(e) => setPayeeName(e.target.value)} className="w-full rounded border p-2" placeholder="Si no deseas seleccionar, escribe un nombre" />
+            </div>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm text-gray-600 mb-1">Desde cuenta</label>
-            <select value={fromAccountId} onChange={(e) => setFromAccountId(e.target.value)} className="w-full rounded border p-2" required>
+            <select value={fromAccountId} onChange={(e) => setFromAccountId(e.target.value)} className="w-full rounded border p-2">
               <option value="">Selecciona…</option>
               {accounts.map((a) => (
                 <option key={a._id} value={a._id}>
@@ -148,7 +199,7 @@ export default function TransactionEditForm({
           </div>
           <div>
             <label className="block text-sm text-gray-600 mb-1">Hacia cuenta</label>
-            <select value={toAccountId} onChange={(e) => setToAccountId(e.target.value)} className="w-full rounded border p-2" required>
+            <select value={toAccountId} onChange={(e) => setToAccountId(e.target.value)} className="w-full rounded border p-2">
               <option value="">Selecciona…</option>
               {accounts.map((a) => (
                 <option key={a._id} value={a._id}>
@@ -163,6 +214,17 @@ export default function TransactionEditForm({
       <div>
         <label className="block text-sm text-gray-600 mb-1">Notas</label>
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full rounded border p-2" rows={3} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm text-gray-600 mb-1">Tags (opcional)</label>
+          <input type="text" value={tagsStr} onChange={(e) => setTagsStr(e.target.value)} className="w-full rounded border p-2" placeholder="separados por coma" />
+        </div>
+        <div>
+          <label className="block text-sm text-gray-600 mb-1">Referencia (opcional)</label>
+          <input type="text" value={reference} onChange={(e) => setReference(e.target.value)} className="w-full rounded border p-2" />
+        </div>
       </div>
 
       {error && <p className="text-red-600 text-sm">{error}</p>}

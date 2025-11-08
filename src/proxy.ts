@@ -15,7 +15,7 @@ function isTokenValid(req: NextRequest) {
   }
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const url = new URL(req.url);
   const pathname = url.pathname;
   const isApi = pathname.startsWith('/api');

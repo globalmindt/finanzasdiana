@@ -89,7 +89,7 @@ export default function AddTransactionForm({ accounts, categories, payees }: { a
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-sm text-gray-600 mb-1">Cuenta</label>
-          <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className="w-full rounded border p-2" required>
+          <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className="w-full rounded border p-2">
             <option value="">Selecciona…</option>
             {accounts.map(a => (
               <option key={a._id} value={a._id}>{a.name}</option>
@@ -170,7 +170,7 @@ export default function AddTransactionForm({ accounts, categories, payees }: { a
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm text-gray-600 mb-1">Desde cuenta</label>
-            <select value={fromAccountId} onChange={(e) => setFromAccountId(e.target.value)} className="w-full rounded border p-2" required>
+            <select value={fromAccountId} onChange={(e) => setFromAccountId(e.target.value)} className="w-full rounded border p-2">
               <option value="">Selecciona…</option>
               {accounts.map(a => (
                 <option key={a._id} value={a._id}>{a.name}</option>
@@ -179,7 +179,7 @@ export default function AddTransactionForm({ accounts, categories, payees }: { a
           </div>
           <div>
             <label className="block text-sm text-gray-600 mb-1">Hacia cuenta</label>
-            <select value={toAccountId} onChange={(e) => setToAccountId(e.target.value)} className="w-full rounded border p-2" required>
+            <select value={toAccountId} onChange={(e) => setToAccountId(e.target.value)} className="w-full rounded border p-2">
               <option value="">Selecciona…</option>
               {accounts.map(a => (
                 <option key={a._id} value={a._id}>{a.name}</option>

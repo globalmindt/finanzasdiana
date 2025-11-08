@@ -20,6 +20,15 @@ export const metadata: Metadata = {
   title: 'Finanzas Personales',
   description: 'Control financiero personal (Next.js + MongoDB)',
   manifest: '/manifest.webmanifest',
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/icons/icon-192.png',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Finanzas',
+  },
 };
 
 export const viewport = {
