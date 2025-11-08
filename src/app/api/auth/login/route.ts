@@ -17,7 +17,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const ok = await comparePassword(parsed.data.password, (user as any).passwordHash);
+    const passHash = (user as any).passwordHash;
+    if (!passHash || typeof passHash !== 'string') {
+      // Usuario con esquema antiguo u objeto incompleto; tratar como credenciales inválidas
+      console.warn('Login: user without passwordHash field', { email: (user as any).email });
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+    }
+    const ok = await comparePassword(parsed.data.password, passHash);
     if (!ok) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
@@ -26,7 +32,7 @@ export async function POST(req: Request) {
     await setAuthCookie(token);
     return NextResponse.json({ token });
   } catch (err) {
-    console.error('login error', err);
+    console.error('login error', (err as Error).message);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
