@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import AppNav from './AppNav';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 
@@ -32,15 +33,7 @@ export default function RootLayout({
           <main className="flex-1">
             {children}
           </main>
-          <nav className="sticky bottom-0 border-t bg-white">
-            <ul className="grid grid-cols-5 text-center">
-              <li className="py-4"><Link href="/">Inicio</Link></li>
-              <li className="py-4"><Link href="/movs">Movs.</Link></li>
-              <li className="py-4 font-bold"><Link href="/add">+</Link></li>
-              <li className="py-4"><Link href="/accounts">Cuentas</Link></li>
-              <li className="py-4"><Link href="/more">Más</Link></li>
-            </ul>
-          </nav>
+          <AppNav />
         </div>
       </body>
     </html>
