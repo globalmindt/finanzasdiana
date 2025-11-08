@@ -56,7 +56,7 @@ export default function TransactionEditForm({
       const payload: any = { type, amount: Number(amount), date: new Date(date).toISOString(), notes };
       if (type === 'income' || type === 'expense') {
         payload.accountId = accountId;
-        payload.categoryId = categoryId;
+        payload.categoryId = categoryId || undefined;
         // limpiar campos de transferencia si cambiaron tipo
         payload.fromAccountId = undefined;
         payload.toAccountId = undefined;
@@ -122,15 +122,15 @@ export default function TransactionEditForm({
             </select>
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">Categoría</label>
-            <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full rounded border p-2" required>
-              <option value="">Selecciona…</option>
-              {categoriesByType.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+          <label className="block text-sm text-gray-600 mb-1">Categoría (opcional)</label>
+          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full rounded border p-2">
+            <option value="">Ninguna</option>
+            {categoriesByType.map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
           </div>
         </div>
       ) : (

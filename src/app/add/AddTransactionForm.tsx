@@ -33,7 +33,7 @@ export default function AddTransactionForm({ accounts, categories, payees }: { a
       const payload: any = { type, amount: Number(amount), date: new Date(date).toISOString(), notes };
       if (type === 'income' || type === 'expense') {
         payload.accountId = accountId;
-        payload.categoryId = categoryId;
+        if (categoryId) payload.categoryId = categoryId;
         if (payeeId) payload.payeeId = payeeId;
       } else if (type === 'transfer') {
         payload.fromAccountId = fromAccountId;
@@ -157,9 +157,9 @@ export default function AddTransactionForm({ accounts, categories, payees }: { a
           </div>
         </div>
         <div>
-          <label className="block text-sm text-gray-600 mb-1">Categoría</label>
-          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full rounded border p-2" required>
-            <option value="">Selecciona…</option>
+          <label className="block text-sm text-gray-600 mb-1">Categoría (opcional)</label>
+          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full rounded border p-2">
+            <option value="">Ninguna</option>
             {categoriesByType.map(c => (
               <option key={c._id} value={c._id}>{c.name}</option>
             ))}

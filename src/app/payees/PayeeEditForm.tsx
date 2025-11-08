@@ -93,7 +93,7 @@ export default function PayeeEditForm({ payee, categories, onClose }: { payee: P
           </select>
         </div>
         <div>
-          <label className="block text-sm text-gray-600 mb-1">Categoría por defecto</label>
+          <label className="block text-sm text-gray-600 mb-1">Categoría por defecto (opcional)</label>
           <select value={defaultCategoryId} onChange={(e) => setDefaultCategoryId(e.target.value)} className="w-full rounded border p-2">
             <option value="">Ninguna</option>
             {categoriesForType.map(c => (

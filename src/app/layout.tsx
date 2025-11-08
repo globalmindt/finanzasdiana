@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import AppNav from './AppNav';
 import SwRegister from './sw-register';
+import PwaInstallPrompt from './PwaInstallPrompt';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 
@@ -19,6 +20,9 @@ export const metadata: Metadata = {
   title: 'Finanzas Personales',
   description: 'Control financiero personal (Next.js + MongoDB)',
   manifest: '/manifest.webmanifest',
+};
+
+export const viewport = {
   themeColor: '#0ea5e9',
 };
 
@@ -39,6 +43,7 @@ export default function RootLayout({
           <AppNav />
         </div>
         <SwRegister />
+        <PwaInstallPrompt />
       </body>
     </html>
   );
