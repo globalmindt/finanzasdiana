@@ -1,18 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { getCollection } from '@/lib/db';
 import { ObjectId } from 'mongodb';
 import { requireAuth } from '@/lib/auth';
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const { userId } = await requireAuth();
     const body = await req.json();
     const movements = await getCollection('investment_movements');
     const investments = await getCollection('investments');
-    const inv = await investments.findOne({ _id: new ObjectId(params.id), userId });
+    const inv = await investments.findOne({ _id: new ObjectId(id), userId });
     if (!inv) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     const doc = {
-      investmentId: new ObjectId(params.id),
+      investmentId: new ObjectId(id),
       userId,
       ...body,
       date: body.date ? new Date(body.date) : new Date(),
