@@ -3,6 +3,7 @@ import { getCollection } from '@/lib/db';
 import { getAuthUser } from '@/lib/auth';
 import PayeeCreateForm from './PayeeCreateForm';
 import PayeeDeleteButton from './PayeeDeleteButton';
+import PayeesListClient from './PayeesListClient';
 
 export default async function ServiciosPage() {
   const auth = await getAuthUser();
@@ -50,34 +51,7 @@ export default async function ServiciosPage() {
           {listSafe.length === 0 ? (
             <p className="text-gray-600">Aún no tienes servicios.</p>
           ) : (
-            <ul className="divide-y">
-              {listSafe.map((p: any) => (
-                <li key={p._id} className="py-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{p.name} <span className="text-xs text-gray-500">({p.type})</span></p>
-                    {p.defaultCategoryId && (
-                      <p className="text-xs text-gray-500">Categoría por defecto: {String(p.defaultCategoryId)}</p>
-                    )}
-                    {typeof p.defaultAmount === 'number' && (
-                      <p className="text-xs text-gray-500">Monto por defecto: {Number(p.defaultAmount)}</p>
-                    )}
-                    {p.frequency && (
-                      <p className="text-xs text-gray-500">Frecuencia: {p.frequency}</p>
-                    )}
-                    <p className="text-xs text-gray-500">
-                      Fecha de cobro: {
-                        p.isFixed
-                          ? (p.frequency === 'mensual' && typeof p.billingDayOfMonth === 'number'
-                              ? `día ${p.billingDayOfMonth} de cada mes`
-                              : (p.billingDate ? new Date(p.billingDate).toLocaleDateString('es-ES') : 'No definida'))
-                          : 'Variable'
-                      }
-                    </p>
-                  </div>
-                  <PayeeDeleteButton id={String(p._id)} />
-                </li>
-              ))}
-            </ul>
+            <PayeesListClient list={listSafe as any} categories={categoriesSafe as any} />
           )}
         </div>
       </div>
