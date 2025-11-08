@@ -4,12 +4,13 @@ import { useRouter } from 'next/navigation';
 
 type Account = { _id: string; name: string; type: string };
 type Category = { _id: string; name: string; kind: 'income' | 'expense' };
-type Payee = { _id: string; name: string; type: 'income' | 'expense' | 'both'; defaultCategoryId?: string; defaultAmount?: number; defaultNotes?: string };
+type Payee = { _id: string; name: string; type: 'income' | 'expense' | 'both'; defaultCategoryId?: string; defaultAmount?: number; defaultNotes?: string; billingDate?: string; billingDayOfMonth?: number; isFixed?: boolean };
 
 export default function AddTransactionForm({ accounts, categories, payees }: { accounts: Account[]; categories: Category[]; payees: Payee[] }) {
   const router = useRouter();
   const [type, setType] = useState<'income' | 'expense' | 'transfer'>('income');
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 16));
+  const [dateTouched, setDateTouched] = useState<boolean>(false);
   const [amount, setAmount] = useState<number>(0);
   const [accountId, setAccountId] = useState<string>('');
   const [categoryId, setCategoryId] = useState<string>('');
@@ -76,7 +77,7 @@ export default function AddTransactionForm({ accounts, categories, payees }: { a
         </div>
         <div>
           <label className="block text-sm text-gray-600 mb-1">Fecha</label>
-          <input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} className="w-full rounded border p-2" />
+          <input type="datetime-local" value={date} onChange={(e) => { setDate(e.target.value); setDateTouched(true); }} className="w-full rounded border p-2" />
         </div>
       </div>
       <div>
@@ -106,6 +107,43 @@ export default function AddTransactionForm({ accounts, categories, payees }: { a
             if (p.defaultCategoryId) setCategoryId(p.defaultCategoryId);
             if (!amount && typeof p.defaultAmount === 'number') setAmount(p.defaultAmount);
             if (!notes && p.defaultNotes) setNotes(p.defaultNotes);
+            // Autorrellenar fecha si es servicio mensual fijo y el usuario no ha tocado la fecha
+            if (!dateTouched && p.isFixed && (p as any).frequency === 'mensual' && typeof p.billingDayOfMonth === 'number') {
+              const parseCurrent = () => {
+                try { return new Date(date); } catch { return new Date(); }
+              };
+              const base = parseCurrent();
+              const daysInMonth = (year: number, monthIndex: number) => new Date(year, monthIndex + 1, 0).getDate();
+              const nextMonthlyOccurrence = (dayOfMonth: number, baseDate: Date) => {
+                const year = baseDate.getFullYear();
+                const month = baseDate.getMonth();
+                const hours = baseDate.getHours();
+                const minutes = baseDate.getMinutes();
+                const dim = daysInMonth(year, month);
+                const targetDay = Math.min(dayOfMonth, dim);
+                let target = new Date(year, month, targetDay, hours, minutes);
+                if (target <= baseDate) {
+                  const nextMonth = month + 1;
+                  const nextYear = year + (nextMonth > 11 ? 1 : 0);
+                  const nextMonthIndex = nextMonth % 12;
+                  const dimNext = daysInMonth(nextYear, nextMonthIndex);
+                  const targetDayNext = Math.min(dayOfMonth, dimNext);
+                  target = new Date(nextYear, nextMonthIndex, targetDayNext, hours, minutes);
+                }
+                return target;
+              };
+              const fmtLocal = (d: Date) => {
+                const pad = (n: number) => String(n).padStart(2, '0');
+                const y = d.getFullYear();
+                const m = pad(d.getMonth() + 1);
+                const dd = pad(d.getDate());
+                const hh = pad(d.getHours());
+                const mm = pad(d.getMinutes());
+                return `${y}-${m}-${dd}T${hh}:${mm}`;
+              };
+              const next = nextMonthlyOccurrence(p.billingDayOfMonth, base);
+              setDate(fmtLocal(next));
+            }
           }} className="w-full rounded border p-2">
             <option value="">Opcional…</option>
             {payeesList

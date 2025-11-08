@@ -61,5 +61,7 @@ export const payeeSchema = z.object({
   defaultNotes: z.string().optional(),
   isFixed: z.boolean().default(false),
   frequency: z.string().optional(),
+  billingDate: z.string().date().or(z.date()).optional(),
+  billingDayOfMonth: z.number().int().min(1).max(31).optional(),
   color: z.string().optional(),
 });

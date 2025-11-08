@@ -27,11 +27,25 @@ export default async function AgregarPage() {
   const categories = await categoriesCol.find({ userId: auth.userId }).sort({ name: 1 }).toArray();
   const payees = await payeesCol.find({ userId: auth.userId }).sort({ name: 1 }).toArray();
 
+  // Normalize for client component: convert ObjectId and Date fields to strings
+  const serialize = (doc: any) => {
+    const o: any = { ...doc };
+    if (o._id) o._id = String(o._id);
+    if (o.userId) o.userId = String(o.userId);
+    if (o.date instanceof Date) o.date = o.date.toISOString();
+    if (o.createdAt instanceof Date) o.createdAt = o.createdAt.toISOString();
+    if (o.nextRunDate instanceof Date) o.nextRunDate = o.nextRunDate.toISOString();
+    return o;
+  };
+  const accountsSafe = accounts.map(serialize);
+  const categoriesSafe = categories.map(serialize);
+  const payeesSafe = payees.map(serialize);
+
   return (
     <div className="p-4">
       <h1 className="text-xl font-semibold">Agregar movimiento</h1>
       <div className="mt-4 rounded bg-white p-4 shadow-sm">
-        <AddTransactionForm accounts={accounts as any[]} categories={categories as any[]} payees={payees as any[]} />
+        <AddTransactionForm accounts={accountsSafe as any[]} categories={categoriesSafe as any[]} payees={payeesSafe as any[]} />
       </div>
     </div>
   );

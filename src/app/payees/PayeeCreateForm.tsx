@@ -13,6 +13,8 @@ export default function PayeeCreateForm({ categories }: { categories: Category[]
   const [defaultNotes, setDefaultNotes] = useState<string>("");
   const [isFixed, setIsFixed] = useState<boolean>(false);
   const [frequency, setFrequency] = useState<string>("");
+  const [billingDate, setBillingDate] = useState<string>("");
+  const [billingDayOfMonth, setBillingDayOfMonth] = useState<number | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +34,13 @@ export default function PayeeCreateForm({ categories }: { categories: Category[]
       if (typeof defaultAmount === 'number' && !Number.isNaN(defaultAmount)) payload.defaultAmount = defaultAmount;
       if (defaultNotes) payload.defaultNotes = defaultNotes;
       if (frequency) payload.frequency = frequency;
+      if (isFixed) {
+        if (frequency === 'mensual' && typeof billingDayOfMonth === 'number' && billingDayOfMonth >= 1 && billingDayOfMonth <= 31) {
+          payload.billingDayOfMonth = billingDayOfMonth;
+        } else if (billingDate) {
+          payload.billingDate = billingDate;
+        }
+      }
       const res = await fetch('/api/payees', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -49,6 +58,8 @@ export default function PayeeCreateForm({ categories }: { categories: Category[]
       setDefaultNotes('');
       setIsFixed(false);
       setFrequency('');
+      setBillingDate('');
+      setBillingDayOfMonth('');
       router.refresh();
     } catch {
       setError('Error de red');
@@ -116,13 +127,45 @@ export default function PayeeCreateForm({ categories }: { categories: Category[]
           </select>
         </div>
       </div>
+      <div className="flex items-center gap-2">
+        <input id="isFixed" type="checkbox" checked={isFixed} onChange={(e) => setIsFixed(e.target.checked)} className="rounded border" />
+        <label htmlFor="isFixed" className="text-sm text-gray-700">Fecha de cobro fija</label>
+      </div>
+      {isFixed && (
+        <div className="grid grid-cols-2 gap-3">
+          {frequency === 'mensual' ? (
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Día del mes</label>
+              <input
+                type="number"
+                min={1}
+                max={31}
+                value={billingDayOfMonth === '' ? '' : String(billingDayOfMonth)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setBillingDayOfMonth(v === '' ? '' : Math.max(1, Math.min(31, Number(v))));
+                }}
+                className="w-full rounded border p-2"
+                placeholder="1–31"
+              />
+              <p className="text-xs text-gray-500 mt-1">Ej. 15 = día 15 de cada mes</p>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Fecha de cobro</label>
+              <input
+                type="date"
+                value={billingDate}
+                onChange={(e) => setBillingDate(e.target.value)}
+                className="w-full rounded border p-2"
+              />
+            </div>
+          )}
+        </div>
+      )}
       <div>
         <label className="block text-sm text-gray-600 mb-1">Notas por defecto</label>
         <input type="text" value={defaultNotes} onChange={(e) => setDefaultNotes(e.target.value)} className="w-full rounded border p-2" />
-      </div>
-      <div className="flex items-center gap-2">
-        <input id="isFixed" type="checkbox" checked={isFixed} onChange={(e) => setIsFixed(e.target.checked)} className="rounded border" />
-        <label htmlFor="isFixed" className="text-sm text-gray-700">Es fijo</label>
       </div>
       {error && <p className="text-red-600 text-sm">{error}</p>}
       <button type="submit" disabled={loading} className="inline-block rounded bg-blue-600 px-4 py-2 text-white">
