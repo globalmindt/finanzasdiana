@@ -161,6 +161,10 @@ export default async function Home({ searchParams }: { searchParams?: { month?: 
                 <span aria-hidden>🏦</span>
                 Cuentas
               </Link>
+              <Link href="/payees" className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-gray-800 hover:bg-gray-50">
+                <span aria-hidden>🧩</span>
+                Servicios
+              </Link>
             </div>
           </section>
         )}

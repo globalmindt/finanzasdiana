@@ -28,6 +28,8 @@ export const transactionSchema = z.object({
   categoryId: z.string().optional(),
   fromAccountId: z.string().optional(),
   toAccountId: z.string().optional(),
+  payeeId: z.string().optional(),
+  payeeName: z.string().optional(),
   notes: z.string().optional(),
   reference: z.string().optional(),
   tags: z.array(z.string()).optional(),
@@ -49,4 +51,15 @@ export const investmentSchema = z.object({
   currentValue: z.number().default(0),
   lastUpdate: z.string().datetime().or(z.date()).optional(),
   notes: z.string().optional(),
+});
+
+export const payeeSchema = z.object({
+  name: z.string().min(1),
+  type: z.enum(['income', 'expense', 'both']).default('expense'),
+  defaultCategoryId: z.string().optional(),
+  defaultAmount: z.number().optional(),
+  defaultNotes: z.string().optional(),
+  isFixed: z.boolean().default(false),
+  frequency: z.string().optional(),
+  color: z.string().optional(),
 });

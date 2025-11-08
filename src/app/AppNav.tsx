@@ -38,7 +38,7 @@ export default function AppNav() {
 
   return (
     <nav className="sticky bottom-0 border-t bg-white">
-      <ul className="grid grid-cols-5 text-center text-sm">
+      <ul className="grid grid-cols-7 text-center text-sm">
         <li className="py-3">
           <Link href="/" className="inline-flex flex-col items-center gap-0.5">
             <span aria-hidden>🏠</span>
@@ -61,6 +61,18 @@ export default function AppNav() {
           <Link href="/accounts" className="inline-flex flex-col items-center gap-0.5">
             <span aria-hidden>🏦</span>
             <span>Cuentas</span>
+          </Link>
+        </li>
+        <li className="py-3">
+          <Link href="/payees" className="inline-flex flex-col items-center gap-0.5">
+            <span aria-hidden>🧩</span>
+            <span>Servicios</span>
+          </Link>
+        </li>
+        <li className="py-3">
+          <Link href="/more" className="inline-flex flex-col items-center gap-0.5">
+            <span aria-hidden>⚙️</span>
+            <span>Más</span>
           </Link>
         </li>
         <li className="py-3">

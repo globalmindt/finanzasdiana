@@ -34,12 +34,12 @@ export async function POST(req: Request) {
     const parsed = transactionSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: parsed.error }, { status: 400 });
     const transactions = await getCollection('transactions');
-    const doc = {
+    const doc: any = {
       ...parsed.data,
       userId,
-      date: new Date(parsed.data.date as any),
       createdAt: new Date().toISOString(),
     };
+    if (doc.date) doc.date = new Date(doc.date as any);
     const result = await transactions.insertOne(doc);
     return NextResponse.json({ _id: result.insertedId, ...doc }, { status: 201 });
   } catch (e) {
