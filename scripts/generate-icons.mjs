@@ -14,6 +14,11 @@ async function run() {
     .resize(512, 512, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
     .png()
     .toFile(`${outDir}/icon-512.png`);
+  // Apple touch icon 180x180 at project root
+  await sharp('public/logo.svg', { density: 256 })
+    .resize(180, 180, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
+    .png()
+    .toFile(`public/apple-touch-icon.png`);
   console.log('Generated PNG icons at public/icons');
 }
 
