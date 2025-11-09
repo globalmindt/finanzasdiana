@@ -5,11 +5,45 @@ import { requireAuth } from '@/lib/auth';
 import { transactionSchema, categorySchema, payeeSchema } from '@/lib/schemas';
 
 function normalizeAmount(raw: string): number {
-  // Replace thousand separators and unify decimal comma/dot
-  const cleaned = raw.replace(/[^0-9,.-]/g, '').replace(/\./g, '').replace(/,(?=\d{1,2}$)/, '.');
-  const num = Number(cleaned);
+  // Robust normalization for amounts with ',' or '.' as decimal separators
+  // Strategy:
+  // - Keep sign
+  // - Detect decimal separator based on last occurrence near 1-2 trailing digits
+  // - Remove thousand separators (the opposite of detected decimal)
+  const s = String(raw || '').trim();
+  if (!s) return 0;
+  const sign = s.includes('-') ? -1 : 1;
+  const only = s.replace(/[^0-9.,-]/g, '');
+  const hasComma = only.includes(',');
+  const hasDot = only.includes('.');
+  let dec = '.'; // default
+  if (hasComma && hasDot) {
+    // choose the separator that appears closest to the end followed by 1-2 digits
+    const mComma = only.match(/,(\d{1,2})$/);
+    const mDot = only.match(/\.(\d{1,2})$/);
+    if (mComma && !mDot) dec = ',';
+    else if (mDot && !mComma) dec = '.';
+    else if (mComma && mDot) dec = mDot.index! > (mComma.index! as number) ? '.' : ',';
+    else dec = '.'; // fallback
+  } else if (hasComma) {
+    // If comma is at the end with 1-2 digits, treat as decimal
+    dec = /(,\d{1,2})$/.test(only) ? ',' : '.';
+  } else if (hasDot) {
+    dec = /(\.\d{1,2})$/.test(only) ? '.' : ',';
+  } else {
+    dec = '.';
+  }
+  let digits = only.replace(/-/g, '');
+  if (dec === ',') {
+    // comma as decimal: remove dots as thousands and convert comma to dot
+    digits = digits.replace(/\./g, '').replace(/,(?=\d{1,2}$)/, '.');
+  } else {
+    // dot as decimal: remove commas as thousands (keep dot)
+    digits = digits.replace(/,/g, '');
+  }
+  const num = Number(digits);
   if (Number.isNaN(num)) return 0;
-  return num;
+  return num * sign;
 }
 
 function parseDate(str: string, dateFormat: 'dmy' | 'ymd') {
@@ -220,9 +254,9 @@ export async function POST(req: Request) {
         if (rawTypeLower) {
           if (rawTypeLower.includes('credit')) type = 'income';
           else if (rawTypeLower.includes('debit')) type = 'expense';
-          else type = amountNum < 0 ? 'expense' : cls.kind; // fallback
+          else type = amountNum < 0 ? 'expense' : 'income'; // fallback: sign decides
         } else {
-          type = amountNum < 0 ? 'expense' : cls.kind;
+          type = amountNum < 0 ? 'expense' : 'income';
         }
         const amount = Math.abs(amountNum);
         const date = parseDate(rawDate, dateFormat);

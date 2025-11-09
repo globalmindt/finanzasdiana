@@ -63,7 +63,7 @@ async function main() {
     let targetCatId = '';
 
     // Nómina (ING/CSV puede aparecer como "Loon", "Salaris", "Salary", "Payroll")
-    if (name.includes('vebego') || name.includes('loon') || name.includes('salaris') || name.includes('salary') || name.includes('payroll')) {
+    if (name.includes('vebego') || name.includes('csu') || name.includes('loon') || name.includes('salaris') || name.includes('salary') || name.includes('payroll')) {
       targetCatId = String(salarioCat._id || '');
     }
     // Subsidios y ayudas (SVB / Toeslagen / Belastingdienst allowances)
