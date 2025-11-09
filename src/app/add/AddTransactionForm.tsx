@@ -1,5 +1,5 @@
 "use client";
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 type Account = { _id: string; name: string; type: string };
@@ -9,7 +9,7 @@ type Payee = { _id: string; name: string; type: 'income' | 'expense' | 'both'; d
 export default function AddTransactionForm({ accounts, categories, payees }: { accounts: Account[]; categories: Category[]; payees: Payee[] }) {
   const router = useRouter();
   const [type, setType] = useState<'income' | 'expense' | 'transfer'>('income');
-  const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 16));
+  const [date, setDate] = useState<string>('');
   const [dateTouched, setDateTouched] = useState<boolean>(false);
   const [amount, setAmount] = useState<number>(0);
   const [accountId, setAccountId] = useState<string>('');
@@ -22,6 +22,142 @@ export default function AddTransactionForm({ accounts, categories, payees }: { a
   // La creación de orígenes se gestiona en /payees
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState<number>(0);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Establecer fecha local al montar para evitar desajustes de hidratación
+  useEffect(() => {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const y = d.getFullYear();
+    const m = pad(d.getMonth() + 1);
+    const dd = pad(d.getDate());
+    const hh = pad(d.getHours());
+    const mm = pad(d.getMinutes());
+    setDate(`${y}-${m}-${dd}T${hh}:${mm}`);
+  }, []);
+
+  function pickReceiptPhoto() {
+    setError(null);
+    fileInputRef.current?.click();
+  }
+
+  async function onReceiptSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setScanning(true);
+      setOcrProgress(0);
+      setImagePreview(URL.createObjectURL(file));
+      const Tesseract: any = await import('tesseract.js');
+      const logger = (m: any) => {
+        if (m && typeof m.progress === 'number') setOcrProgress(Math.round(m.progress * 100));
+      };
+      // Preferir español, caer a inglés si falla
+      let text = '';
+      try {
+        const res = await Tesseract.recognize(file, 'spa', { logger });
+        text = res?.data?.text || '';
+      } catch {
+        const res2 = await Tesseract.recognize(file, 'eng', { logger });
+        text = res2?.data?.text || '';
+      }
+      const parsed = parseReceiptText(text);
+      // Rellenos básicos
+      setType('expense');
+      if (parsed.amount != null) setAmount(parsed.amount);
+      if (parsed.dateLocal) setDate(parsed.dateLocal);
+      // Intentar casar origen
+      const merchant = parsed.merchant?.toLowerCase();
+      if (merchant) {
+        const match = payeesList.find(p => merchant.includes(p.name.toLowerCase()));
+        if (match) setPayeeId(match._id);
+      }
+      // Añadir a notas un resumen
+      const summaryParts = [
+        parsed.merchant ? `Comercio: ${parsed.merchant}` : null,
+        parsed.dateDisplay ? `Fecha: ${parsed.dateDisplay}` : null,
+        parsed.amount != null ? `Monto detectado: ${parsed.amount}` : null,
+      ].filter(Boolean);
+      if (summaryParts.length) {
+        setNotes(n => (n ? `${n}\n` : '') + `Factura escaneada → ${summaryParts.join(' · ')}`);
+      }
+    } catch (err) {
+      setError('No se pudo leer la factura. Prueba con otra foto.');
+    } finally {
+      setScanning(false);
+      setOcrProgress(0);
+      // Limpia el input para permitir re-selección del mismo archivo
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
+
+  function parseReceiptText(text: string) {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+    // Monto: buscar el mayor número con decimales
+    const moneyRegex = /(\$|€|usd|mxn)?\s*(\d{1,3}(?:[.,]\d{3})*[.,]\d{2}|\d+[.,]\d{2})/gi;
+    let amount: number | null = null;
+    let max = 0;
+    for (const m of text.matchAll(moneyRegex)) {
+      const raw = (m[2] || '').replace(/\./g, '').replace(/,/g, '.');
+      const val = Number(raw);
+      if (!isNaN(val) && val > max) { max = val; amount = val; }
+    }
+    // Fecha: formatos comunes
+    const dateRegexes = [
+      /(\d{2})[\/\-](\d{2})[\/\-](\d{4})/, // dd/mm/yyyy
+      /(\d{4})[\/\-](\d{2})[\/\-](\d{2})/, // yyyy-mm-dd
+    ];
+    let dateDisplay: string | null = null;
+    let dateLocal: string | null = null;
+    for (const rx of dateRegexes) {
+      const m = text.match(rx);
+      if (m) {
+        if (rx === dateRegexes[0]) {
+          // dd/mm/yyyy
+          const d = Number(m[1]);
+          const mo = Number(m[2]);
+          const y = Number(m[3]);
+          dateDisplay = `${String(d).padStart(2, '0')}/${String(mo).padStart(2, '0')}/${y}`;
+          const dt = new Date(y, mo - 1, d, 12, 0);
+          dateLocal = fmtLocal(dt);
+        } else {
+          // yyyy-mm-dd
+          const y = Number(m[1]);
+          const mo = Number(m[2]);
+          const d = Number(m[3]);
+          dateDisplay = `${String(d).padStart(2, '0')}/${String(mo).padStart(2, '0')}/${y}`;
+          const dt = new Date(y, mo - 1, d, 12, 0);
+          dateLocal = fmtLocal(dt);
+        }
+        break;
+      }
+    }
+    // Comercio: primera línea destacada que no sea palabras comunes
+    const blacklist = ['factura', 'ticket', 'recibo', 'subtotal', 'total', 'iva', 'rfc', 'cif'];
+    let merchant: string | null = null;
+    for (const l of lines) {
+      const clean = l.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 &.-]/g, '');
+      if (clean.length < 4) continue;
+      const low = clean.toLowerCase();
+      if (blacklist.some(b => low.includes(b))) continue;
+      merchant = clean;
+      break;
+    }
+    return { amount, dateDisplay, dateLocal, merchant };
+  }
+
+  function fmtLocal(d: Date) {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const y = d.getFullYear();
+    const m = pad(d.getMonth() + 1);
+    const dd = pad(d.getDate());
+    const hh = pad(d.getHours());
+    const mm = pad(d.getMinutes());
+    return `${y}-${m}-${dd}T${hh}:${mm}`;
+  }
 
   const categoriesByType = categories.filter(c => (type === 'income' ? c.kind === 'income' : c.kind === 'expense'));
 
@@ -154,6 +290,29 @@ export default function AddTransactionForm({ accounts, categories, payees }: { a
           </select>
           <div className="mt-2">
             <p className="text-xs text-gray-600">Configura y crea orígenes en <a href="/payees" className="text-blue-600">Servicios</a>.</p>
+          </div>
+          <div className="mt-3 p-2 border rounded">
+            <div className="flex items-center justify-between gap-2">
+              <button type="button" onClick={pickReceiptPhoto} className="rounded bg-green-600 px-3 py-1.5 text-white text-sm">
+                {scanning ? 'Leyendo factura…' : 'Escanear factura'}
+              </button>
+              {scanning && <span className="text-xs text-gray-600">{ocrProgress}%</span>}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={onReceiptSelected}
+            />
+            {imagePreview && (
+              <div className="mt-2">
+                <img src={imagePreview} alt="Factura" className="max-h-40 rounded border" />
+                <p className="text-xs text-gray-600 mt-1">Vista previa de la factura</p>
+              </div>
+            )}
+            <p className="text-xs text-gray-600 mt-2">Toma una foto y se rellenará monto, fecha y posible comercio.</p>
           </div>
         </div>
         <div>
